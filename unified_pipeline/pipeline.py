@@ -173,14 +173,24 @@ class UnifiedMoshiAvatarPipeline:
         print(f"[UnifiedPipeline] audio_emb → AvatarForcing: {audio_emb_for_video.shape}")
 
         # ── 4. Generate silent talking-head video ─────────────────────────────
+        import time
         print("[UnifiedPipeline] Running AvatarForcing diffusion …")
+        t0 = time.time()
         frames_np = self.af.generate_to_numpy(
             image_path = image_path,
             audio_emb  = audio_emb_for_video,
             prompt     = prompt,
         )
-        print(f"[UnifiedPipeline] Video generated: {frames_np.shape[0]} frames "
-              f"@ {frames_np.shape[2]}x{frames_np.shape[1]}")
+        t1 = time.time()
+        gen_time = t1 - t0
+        num_frames = frames_np.shape[0]
+        gen_fps = num_frames / gen_time if gen_time > 0 else 0
+        video_dur = num_frames / fps
+        
+        print(f"[UnifiedPipeline] Video generated: {num_frames} frames "
+              f"({video_dur:.2f}s at {fps} fps) in {gen_time:.2f}s "
+              f"→ Generation Speed: {gen_fps:.2f} fps. "
+              f"Resolution: {frames_np.shape[2]}x{frames_np.shape[1]}")
 
         # ── 5. Concatenate Moshi raw PCM ──────────────────────────────────────
         response_pcm = torch.cat(all_pcm_chunks, dim=1)   # (1, total_samples)
